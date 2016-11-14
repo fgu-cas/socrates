@@ -5,6 +5,7 @@
 #include <QtWidgets/QMainWindow>
 #include <QCloseEvent>
 #include <QSerialPort>
+#include <QTextStream>
 #include "ui_socrates.h"
 
 class socrates : public QMainWindow
@@ -20,6 +21,8 @@ private:
 	void saveSettings();
 
 	std::unique_ptr<QSerialPort> serialPort;
+	std::unique_ptr<QFile> logFile;
+	std::unique_ptr<QTextStream> logStream;
 	QString buffer;
 	int count = 0;
 	int gate1Total;
