@@ -3,7 +3,7 @@
 #include <QSettings>
 #include <QSerialPortInfo>
 #include <QFileDialog>
-#include <QDebug>
+#include <QDateTime>
 
 socrates::socrates(QWidget *parent)
 	: QMainWindow(parent)
@@ -11,6 +11,7 @@ socrates::socrates(QWidget *parent)
 	ui.setupUi(this);
 	ui.resultTableWidget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
 	ui.resultTableWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+	ui.resultTableWidget->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 	for (QSerialPortInfo port : QSerialPortInfo::availablePorts()) {
 		ui.portCombo->addItem(port.portName());
 	}
@@ -76,6 +77,8 @@ void socrates::startLog() {
 			logStream.reset(new QTextStream(logFile.get()));
 		}
 
+		timer.start();
+
 		ui.startStopButton->setText("Stop");
 		ui.statusBar->showMessage(u8"Byl zahájen záznam.");
 	}
@@ -107,12 +110,11 @@ void socrates::handleData() {
 	if (index != -1) {
 		QString line = buffer.left(index);
 		buffer.remove(0, index + 2);
-		qDebug() << line;
 		QStringList split = line.split(" ");
-		qDebug() << split;
 		if (split.size() == 2) {
 			int gate = split[0].trimmed().toInt();
 			int length = split[1].trimmed().toInt();
+			int time = timer.elapsed() - length;
 
 			switch (gate) {
 			case 1:
@@ -134,16 +136,21 @@ void socrates::handleData() {
 			}
 
 			ui.resultTableWidget->setRowCount(count + 1);
+			QTableWidgetItem* timeWidget = new QTableWidgetItem(QString("+%1 s").arg(time/1000.0));
+			timeWidget->setTextAlignment(Qt::AlignCenter);
 			QTableWidgetItem* gateWidget = new QTableWidgetItem(QString::number(gate));
 			gateWidget->setTextAlignment(Qt::AlignCenter);
 			QTableWidgetItem* lengthWidget = new QTableWidgetItem(QString("%1 ms").arg(length));
 			lengthWidget->setTextAlignment(Qt::AlignCenter);
-			ui.resultTableWidget->setItem(count, 0, gateWidget);
-			ui.resultTableWidget->setItem(count, 1, lengthWidget);
+
+			ui.resultTableWidget->setItem(count, 0, timeWidget);
+			ui.resultTableWidget->setItem(count, 1, gateWidget);
+			ui.resultTableWidget->setItem(count, 2, lengthWidget);
+			
 			ui.resultTableWidget->scrollToBottom();
 
 			if (!ui.fileLine->text().isEmpty()) {
-				(*logStream.get()) << QString("%1, %2\r\n").arg(gate).arg(length);
+				(*logStream.get()) << QString("%1, %2, %3\r\n").arg(time).arg(gate).arg(length);
 			}
 
 			count++;
@@ -154,7 +161,7 @@ void socrates::handleData() {
 void socrates::reset() {
 	count = 0;
 	ui.resultTableWidget->clear();
-	ui.resultTableWidget->setHorizontalHeaderLabels(QStringList({ u8"Brána", u8"Délka vstupu" }));
+	ui.resultTableWidget->setHorizontalHeaderLabels(QStringList({ u8"Čas", u8"Brána", u8"Délka" }));
 
 	gate1Total = 0;
 	gate2Total = 0;

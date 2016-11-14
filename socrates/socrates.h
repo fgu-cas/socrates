@@ -6,6 +6,7 @@
 #include <QCloseEvent>
 #include <QSerialPort>
 #include <QTextStream>
+#include <QElapsedTimer>
 #include "ui_socrates.h"
 
 class socrates : public QMainWindow
@@ -24,6 +25,7 @@ private:
 	std::unique_ptr<QFile> logFile;
 	std::unique_ptr<QTextStream> logStream;
 	QString buffer;
+	QElapsedTimer timer;
 	int count = 0;
 	int gate1Total;
 	int gate2Total;
